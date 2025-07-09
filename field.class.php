@@ -87,17 +87,27 @@ class profile_field_associated extends profile_field_base {
         $associatedfield = $this->field->param1;
         $useoriginal = $this->field->param2;
 
-        if ($useoriginal && isset($usernew->{$associatedfield})) {
-            $usernew->{$this->inputname} = $usernew->{$associatedfield};
-        }
-
-        if (!isset($usernew->{$this->inputname})) {
-            // Field not present in form, probably locked and invisible - skip it.
-            return null;
-        }
-
-        if (!$useoriginal) {    // Preventing 1 redundant update.
-            $DB->set_field('user', $this->field->param1, $usernew->{$this->inputname}, array('id' => $usernew->id));
+        // If $useoriginal then it should check whether to update associated or original and apply relevant change
+        if ($useoriginal) {
+            if (!isset($usernew->{$this->inputname})) {
+                // Likely on edit profile form so may need to update the custom field
+                if (isset($usernew->{$associatedfield})) {
+                    $usernew->{$this->inputname} = $usernew->{$associatedfield};
+                }
+            } else {
+                // Likely on signup form so should only have this field
+                if (isset($usernew->{$associatedfield})) {
+                    // Somehow we have both, do nothing.
+                } else {
+                    // Update the database for the associated field
+                    $DB->set_field('user', $this->field->param1, $usernew->{$this->inputname}, array('id' => $usernew->id));
+                }
+            }
+        } else {
+            if (!isset($usernew->{$this->inputname})) {
+                // Field not present in form, probably locked and invisible - skip it.
+                return null;
+            }
         }
 
         return parent::edit_save_data($usernew);
